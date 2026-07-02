@@ -3,7 +3,7 @@
 
 schemaVersion: 2.3.0
 metadata:
-  generateName: openshell
+  generateName: openshell-
   version: 0.0.1
   displayName: OpenShell
   description: Safe, sandboxed runtimes for autonomous AI agents
@@ -16,6 +16,7 @@ metadata:
     - Kubernetes
     - Docker
   attributes:
+    controller.devfile.io/storage-type: ephemeral
     source: https://github.com/NVIDIA/OpenShell
 
 components:
