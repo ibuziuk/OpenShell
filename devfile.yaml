@@ -3,7 +3,7 @@
 
 schemaVersion: 2.3.0
 metadata:
-  name: openshell
+  generateName: openshell
   version: 0.0.1
   displayName: OpenShell
   description: Safe, sandboxed runtimes for autonomous AI agents
