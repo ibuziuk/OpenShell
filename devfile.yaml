@@ -163,7 +163,3 @@ commands:
       commandLine: mise run ci
       group:
         kind: test
-
-events:
-  postStart:
-    - install-tools
