@@ -1,0 +1,169 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+schemaVersion: 2.3.0
+metadata:
+  name: openshell
+  version: 0.0.1
+  displayName: OpenShell
+  description: Safe, sandboxed runtimes for autonomous AI agents
+  language: Rust
+  projectType: Rust
+  tags:
+    - Rust
+    - Python
+    - gRPC
+    - Kubernetes
+    - Docker
+  attributes:
+    source: https://github.com/NVIDIA/OpenShell
+
+components:
+  - name: tools
+    container:
+      image: quay.io/devfile/universal-developer-image:latest
+      memoryLimit: 8Gi
+      memoryRequest: 2Gi
+      cpuLimit: "4"
+      cpuRequest: "1"
+      mountSources: true
+      env:
+        - name: RUSTC_WRAPPER
+          value: sccache
+        - name: SCCACHE_DIR
+          value: /home/user/.cache/sccache
+        - name: DOCKER_BUILDKIT
+          value: "1"
+        - name: MISE_DATA_DIR
+          value: /home/user/.local/share/mise
+        - name: MISE_CACHE_DIR
+          value: /home/user/.cache/mise
+      endpoints:
+        - name: gateway-grpc
+          targetPort: 8080
+          exposure: internal
+        - name: gateway-health
+          targetPort: 8081
+          exposure: internal
+        - name: metrics
+          targetPort: 9090
+          exposure: internal
+      volumeMounts:
+        - name: cargo-cache
+          path: /home/user/.cargo/registry
+        - name: sccache
+          path: /home/user/.cache/sccache
+        - name: mise-data
+          path: /home/user/.local/share/mise
+        - name: uv-cache
+          path: /home/user/.cache/uv
+
+  - name: cargo-cache
+    volume:
+      size: 2Gi
+
+  - name: sccache
+    volume:
+      size: 2Gi
+
+  - name: mise-data
+    volume:
+      size: 2Gi
+
+  - name: uv-cache
+    volume:
+      size: 1Gi
+
+commands:
+  - id: install-tools
+    exec:
+      label: "Install toolchain via mise"
+      component: tools
+      workingDir: ${PROJECT_SOURCE}
+      commandLine: |
+        curl https://mise.run | sh &&
+        export PATH="$HOME/.local/bin:$PATH" &&
+        mise trust &&
+        env -u RUSTC_WRAPPER mise install --locked &&
+        mise reshim
+      group:
+        kind: build
+
+  - id: build
+    exec:
+      label: "Build all crates"
+      component: tools
+      workingDir: ${PROJECT_SOURCE}
+      commandLine: cargo build --workspace
+      group:
+        kind: build
+
+  - id: build-release
+    exec:
+      label: "Build all crates (release)"
+      component: tools
+      workingDir: ${PROJECT_SOURCE}
+      commandLine: cargo build --workspace --release
+      group:
+        kind: build
+
+  - id: test
+    exec:
+      label: "Run unit tests"
+      component: tools
+      workingDir: ${PROJECT_SOURCE}
+      commandLine: cargo test --workspace
+      group:
+        kind: test
+        isDefault: true
+
+  - id: test-python
+    exec:
+      label: "Run Python tests"
+      component: tools
+      workingDir: ${PROJECT_SOURCE}
+      commandLine: |
+        uv pip install --group dev &&
+        uv run pytest python/ -v
+      group:
+        kind: test
+
+  - id: pre-commit
+    exec:
+      label: "Run pre-commit checks (lint + format)"
+      component: tools
+      workingDir: ${PROJECT_SOURCE}
+      commandLine: mise run pre-commit
+      group:
+        kind: test
+
+  - id: clippy
+    exec:
+      label: "Run Clippy lints"
+      component: tools
+      workingDir: ${PROJECT_SOURCE}
+      commandLine: cargo clippy --workspace --all-targets -- -D warnings
+      group:
+        kind: test
+
+  - id: fmt-check
+    exec:
+      label: "Check formatting"
+      component: tools
+      workingDir: ${PROJECT_SOURCE}
+      commandLine: cargo fmt --all -- --check
+      group:
+        kind: test
+
+  - id: ci
+    exec:
+      label: "Full local CI (lint + compile + tests)"
+      component: tools
+      workingDir: ${PROJECT_SOURCE}
+      commandLine: mise run ci
+      group:
+        kind: test
+
+events:
+  postStart:
+    - install-tools
