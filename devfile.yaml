@@ -22,7 +22,7 @@ metadata:
 components:
   - name: tools
     container:
-      image: quay.io/devfile/universal-developer-image:latest
+      image: quay.io/devfile/universal-developer-image:pr-260
       memoryLimit: 8Gi
       memoryRequest: 2Gi
       cpuLimit: "4"
